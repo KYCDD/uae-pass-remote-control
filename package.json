@@ -1,0 +1,22 @@
+{
+  "name": "kycdd-remote-desktop-control",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Drives legacy services on a Windows machine - in a real browser or by driving the desktop - on behalf of the KYCDD platform.",
+  "type": "module",
+  "engines": {
+    "node": ">=18.17"
+  },
+  "scripts": {
+    "serve": "node src/server/server.js",
+    "preflight": "node src/preflight.js",
+    "task": "node bin/run-task.js",
+    "prompt": "node bin/prompt.js"
+  },
+  "optionalDependencies": {
+    "dotenv": "^16.4.5",
+    "puppeteer": "^23.0.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  }
+}

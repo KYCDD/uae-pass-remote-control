@@ -1,0 +1,102 @@
+{
+  "_comment": "A real envelope as App\\RemoteBrowser\\RemoteInstruction builds it, for replaying a Growth session harvest locally with the browser in front of you. The playbook and rules below are copies of what the platform sends; if they drift from RemoteService.php, the platform's copy is the one that counts.",
+
+  "version": "1",
+  "idempotency_key": "local-growth-session",
+
+  "service": {
+    "key": "growth_session",
+    "name": "Growth (UAE National Economic Register) - session harvest",
+    "url": "https://www.growth.gov.ae/G2C/",
+    "requires_login": true,
+    "credential_alias": "growth_uae_pass"
+  },
+
+  "inputs": {
+    "probe_licence_number": "2313602.01",
+    "probe_emirate_id": "2",
+    "probe_entity_id": "29"
+  },
+
+  "instructions": {
+    "operating_rules": [
+      "You are operating a real web browser on a Windows machine in order to read a record out of a legacy government portal. You see the screen as screenshots and you act by clicking, typing and scrolling.",
+      "Work only from what is visible on the current screen. If you cannot see something, scroll or open the relevant screen until you can. Never fill in a field from your own knowledge of the company, from an earlier run, or from anything other than the portal in front of you.",
+      "This is a read-only enquiry. Do not submit an application, start a renewal, upload a document, make a payment, accept terms and conditions, change any account or profile setting, or send any message. If the only way forward appears to require one of those, stop and report it instead.",
+      "Take one action at a time and look at the result before deciding the next one. These portals are slow and frequently render an empty table or a half-drawn form before the data arrives, so a screen that looks wrong is usually a screen that is not finished loading.",
+      "Do not attempt to solve a CAPTCHA, an image challenge or any other bot check. If one blocks the way, stop and report it as blocked_by_bot_check.",
+      "The credentials for this portal are supplied to you by the machine you are running on, under the alias named in the task. Use them only to sign in to that portal. Never type them anywhere else, never repeat them in your notes, and never leave them visible in a captured screenshot.",
+      "If you reach one of the listed dead ends, stop immediately and report that outcome. Do not keep retrying a portal that has told you it has nothing, and do not keep retrying a sign-in that has been rejected.",
+      "If you run out of steps or time, stop and report how far you got and what the last screen showed. A partial answer that says what it is missing is useful; a guess that fills the gaps is not."
+    ],
+
+    "playbook": [
+      "1. Open the portal and wait for the National Economic Register to finish loading. It is an OutSystems application, so the page shell renders well before the content; wait for the content rather than for the spinner to appear.",
+      "2. Work out whether there is already a session BEFORE going near the sign-in link. There is one if the header shows a signed-in user rather than a Login control, and the site has a SessionState cookie. If there is a session, keep it and go straight to step 6. Signing in again through UAE Pass issues a new session and invalidates the one already held, so a needless sign-in destroys a working session.",
+      "3. If there is no session, sign in with the credentials held under the alias \"growth_uae_pass\". Sign-in is delegated to UAE Pass, so expect to be redirected to id.moec.gov.ae and then back to growth.gov.ae.",
+      "4. UAE Pass will ask either for a one-time code or for the sign-in to be approved in the UAE Pass mobile app. Request the code through the two_factor channel named in the task and wait for it. Do not guess a code, and do not request a second one while the first is still valid.",
+      "5. Confirm the sign-in actually landed: you are back on a growth.gov.ae page, and the site now has both a SessionState and an IdentityTokenId cookie. If either is missing the sign-in did not complete, however the page looks.",
+      "6. The values this task exists to collect are only issued once the browser has made each of the four API calls that use them, so the next three steps exist to make the portal issue them.",
+      "7. Open the economic licence enquiry screen, enter probe_licence_number as the licence number, set the emirate and entity to probe_emirate_id and probe_entity_id if the screen asks for them, and submit the search. This makes the portal call DataActionGetEconomicLicences2.",
+      "8. Open the first result to reach its detail screen. This makes the portal call DataActionGetEconomicLicenceDetails, and because the licence number is encrypted before it goes in the detail URL, it also calls ActionEncryptText.",
+      "9. On the detail screen, use the export or download-as-PDF option. This makes the portal call ActionGetPageAsBinaryByUrl. You do not need to keep the PDF itself.",
+      "10. Call capture to read the connection details off the requests the browser has already sent. It will tell you which of the four calls it saw and which values are still missing; if one is missing, go back and trigger that step, then capture again.",
+      "11. Say whether a session was already open when you arrived, and report anything the next reader needs in notes. Then finish."
+    ],
+
+    "dead_ends": {
+      "UAE Pass rejects the credentials, or reports the account locked or suspended": "credentials_rejected",
+      "The UAE Pass one-time code or app approval does not arrive within the time allowed": "two_factor_timeout",
+      "growth.gov.ae shows a maintenance or outage page": "portal_unavailable",
+      "The session is good but the economic licence enquiry screen cannot be reached": "enquiry_unavailable",
+      "A probe call comes back with an OutSystems exception instead of data": "probe_failed",
+      "A visible CAPTCHA or other bot check has to be solved to continue": "blocked_by_bot_check"
+    }
+  },
+
+  "result_schema": {
+    "type": "object",
+    "properties": {
+      "harvested": { "type": "boolean" },
+      "reused_existing_session": { "type": "boolean" },
+      "cookie": { "type": "string" },
+      "token": { "type": "string" },
+      "module_version": { "type": "string" },
+      "search_api_version": { "type": "string" },
+      "detail_api_version": { "type": "string" },
+      "encrypt_api_version": { "type": "string" },
+      "pdf_api_version": { "type": "string" },
+      "signed_in_as": { "type": "string" },
+      "notes": { "type": "string" }
+    },
+    "required": [
+      "harvested",
+      "reused_existing_session",
+      "cookie",
+      "token",
+      "module_version",
+      "search_api_version",
+      "detail_api_version",
+      "encrypt_api_version",
+      "pdf_api_version",
+      "signed_in_as",
+      "notes"
+    ],
+    "additionalProperties": false
+  },
+
+  "limits": {
+    "timeout_seconds": 900,
+    "max_steps": 80
+  },
+
+  "artifacts": {
+    "screenshots": "none",
+    "capture_documents": false
+  },
+
+  "two_factor": {
+    "channel": "uae_pass",
+    "reference": null
+  }
+}

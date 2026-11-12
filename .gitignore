@@ -1,0 +1,12 @@
+node_modules/
+
+# Real portal credentials
+.env
+credentials.json
+
+# Live browser sessions. These contain session cookies and identity tokens for
+# the portals this machine signs in to; they are as sensitive as the passwords.
+profiles/
+
+# Retained screenshots, which may show portal pages mid-session
+artifacts/
